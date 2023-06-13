@@ -622,7 +622,7 @@ class SwinTransformer(nn.Module):
         flops += self.num_features * self.num_classes
         return flops
 
-
+# ========================== Original Load =========================
 def load_pretrained(model, logger):
     logger.info(f"==============> Loading weight swin_base_patch4_window7_224 for fine-tuning......")
     checkpoint = torch.load("/home/jack/Project/MutiModal/SentimentAnalysis/JackNet/checkpoints/swin_base_patch4_window7_224.pth", map_location='cpu')

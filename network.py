@@ -65,9 +65,12 @@ class AOTN(nn.Module):
         # 3. 模态不变和模态特定
         ##########################################
         # 模态特定
-        self.tf_encoder_private_a = MyTransformer(d_emb_1=4*input_sizes[2], d_emb_2=4*input_sizes[2], n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
-        self.tf_encoder_private_v = MyTransformer(d_emb_1=4*input_sizes[1], d_emb_2=4*input_sizes[1], n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
-        self.tf_encoder_private_t = MyTransformer(d_emb_1=768, d_emb_2=768, n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
+        # self.tf_encoder_private_a = MyTransformer(d_emb_1=4*input_sizes[2], d_emb_2=4*input_sizes[2], n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
+        # self.tf_encoder_private_v = MyTransformer(d_emb_1=4*input_sizes[1], d_emb_2=4*input_sizes[1], n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
+        # self.tf_encoder_private_t = MyTransformer(d_emb_1=768, d_emb_2=768, n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
+        self.tf_encoder_private_a = MyTransformer(d_emb_1=4*input_sizes[2], d_emb_2=4*input_sizes[1], n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
+        self.tf_encoder_private_v = MyTransformer(d_emb_1=4*input_sizes[1], d_emb_2=768, n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
+        self.tf_encoder_private_t = MyTransformer(d_emb_1=768, d_emb_2=4*input_sizes[2], n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
         # 模态不变
         self.tf_encoder_share = MyTransformer(d_emb_1=self.config.hidden_size, d_emb_2=self.config.hidden_size, n_layers=5, d_inner=512, n_head=8, d_k=32, d_out=64, dropout=0.5, n_position=config.batch_size, add_sa=True)
         # 模态对齐
@@ -118,10 +121,16 @@ class AOTN(nn.Module):
 
     def shared_modaties(self, t_feature, v_feature, a_feature): # ([32, 768]) ([32, 140]) ([32, 296]) 
 
-        # (2-1) 模态特定(单独学习) # such as ([32, 296]) -> ([2, 32, 296]) -> ([2, 32, 296])
-        A_1, A_2 = self.tf_encoder_private_a(torch.cat([torch.unsqueeze(a_feature,0),torch.unsqueeze(a_feature,0)],dim=0),torch.cat([torch.unsqueeze(a_feature,0),torch.unsqueeze(a_feature,0)],dim=0))
-        V_1, V_2 = self.tf_encoder_private_v(torch.cat([torch.unsqueeze(v_feature,0),torch.unsqueeze(v_feature,0)],dim=0),torch.cat([torch.unsqueeze(v_feature,0),torch.unsqueeze(v_feature,0)],dim=0))
-        T_1, T_2 = self.tf_encoder_private_t(torch.cat([torch.unsqueeze(t_feature,0),torch.unsqueeze(t_feature,0)],dim=0),torch.cat([torch.unsqueeze(t_feature,0),torch.unsqueeze(t_feature,0)],dim=0))
+        # # (2-1) Version1 模态特定(单独学习) # such as ([32, 296]) -> ([2, 32, 296]) -> ([2, 32, 296])
+        # A_1, A_2 = self.tf_encoder_private_a(torch.cat([torch.unsqueeze(a_feature,0),torch.unsqueeze(a_feature,0)],dim=0),torch.cat([torch.unsqueeze(a_feature,0),torch.unsqueeze(a_feature,0)],dim=0))
+        # V_1, V_2 = self.tf_encoder_private_v(torch.cat([torch.unsqueeze(v_feature,0),torch.unsqueeze(v_feature,0)],dim=0),torch.cat([torch.unsqueeze(v_feature,0),torch.unsqueeze(v_feature,0)],dim=0))
+        # T_1, T_2 = self.tf_encoder_private_t(torch.cat([torch.unsqueeze(t_feature,0),torch.unsqueeze(t_feature,0)],dim=0),torch.cat([torch.unsqueeze(t_feature,0),torch.unsqueeze(t_feature,0)],dim=0))
+        # self.private_a, self.private_v, self.private_t = (A_1+A_2)/2.0, (V_1+V_2)/2.0, (T_1+T_2)/2.0
+
+        # (2-1) Version2 模态特定(交互学习) 模态特定 # ([32, 296]) -> ([2, 32, 296]) -> ([2, 32, 296])
+        A_1, V_2 = self.tf_encoder_private_a(torch.cat([torch.unsqueeze(a_feature,0),torch.unsqueeze(a_feature,0)],dim=0),torch.cat([torch.unsqueeze(v_feature,0),torch.unsqueeze(v_feature,0)],dim=0))
+        V_1, T_2 = self.tf_encoder_private_v(torch.cat([torch.unsqueeze(v_feature,0),torch.unsqueeze(v_feature,0)],dim=0),torch.cat([torch.unsqueeze(t_feature,0),torch.unsqueeze(t_feature,0)],dim=0))
+        T_1, A_2 = self.tf_encoder_private_t(torch.cat([torch.unsqueeze(t_feature,0),torch.unsqueeze(t_feature,0)],dim=0),torch.cat([torch.unsqueeze(a_feature,0),torch.unsqueeze(a_feature,0)],dim=0))
         self.private_a, self.private_v, self.private_t = (A_1+A_2)/2.0, (V_1+V_2)/2.0, (T_1+T_2)/2.0
 
         # (2-2) 模态绑定
