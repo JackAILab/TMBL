@@ -5,7 +5,9 @@ from torch.utils.data import DataLoader, Dataset
 from transformers import BertTokenizer
 from create_dataset import MOSI, MOSEI, UR_FUNNY, PAD
 
-bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+# bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', mirror='https://huggingface.co/mirrors')
+
 
 class MSADataset(Dataset):
     def __init__(self, config):
