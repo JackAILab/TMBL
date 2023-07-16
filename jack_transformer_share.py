@@ -37,12 +37,12 @@ class MultiHeadAttention(nn.Module): # MultiHeadAttention(n_head=4, d_emb_q=256,
         assert self.d_v % n_head == 0, 'Error from MultiHeadAttention: self.d_v % n_head should be zero.'
         
         self.w_q = nn.Linear(d_emb_q, self.d_k, bias=False) # you can also try nn.Conv1d(d_emb_q, self.d_k, 3, 1, 1, bias=False)     d_emb_q=296    self.d_k=32
-        self.w_k = nn.Linear(d_emb_v, self.d_k, bias=False)
-        self.w_v = nn.Linear(d_emb_v, self.d_v, bias=False)
+        self.w_k = nn.Linear(d_emb_v, self.d_k, bias=False) # d_emb_v=296    self.d_k=32
+        self.w_v = nn.Linear(d_emb_v, self.d_v, bias=False) # d_emb_v=296    self.d_k=32
         self.fc = nn.Linear(self.d_v, d_emb_q, bias=False)
 
         # =========== Jack Add Keep Dim 这样即能keep_dim 也可以进行特征共享
-        self.keep_q_k = nn.Conv1d(self.d_k, self.d_k, kernel_size=1, stride=1)
+        self.keep_q_k = nn.Conv1d(self.d_k, self.d_k, kernel_size=1, stride=1) # self.d_k=32 self.d_k=32
         # =========== Jack Add Keep Dim
 
         self.attention = ScaledDotProductAttention(temperature=self.d_k ** 0.5, attn_dropout=dropout)
@@ -59,10 +59,10 @@ class MultiHeadAttention(nn.Module): # MultiHeadAttention(n_head=4, d_emb_q=256,
 
         # Separate different heads: b x l x n x (d/n)
         try:
-            # q = self.keep_q_k(self.w_q(q)).view(sz_b, len_q, n_head, d_k // n_head) # Jack Add Q K 进行keepdim 并共享注意力参数
-            # k = self.keep_q_k(self.w_k(k)).view(sz_b, len_k, n_head, d_k // n_head)
-            q = self.w_q(q).view(sz_b, len_q, n_head, d_k // n_head) # Original
-            k = self.w_k(k).view(sz_b, len_k, n_head, d_k // n_head)                        
+            q = self.keep_q_k(self.w_q(q)).view(sz_b, len_q, n_head, d_k // n_head) # Jack Add Q K 进行keepdim 并共享注意力参数
+            k = self.keep_q_k(self.w_k(k)).view(sz_b, len_k, n_head, d_k // n_head)
+            # q = self.w_q(q).view(sz_b, len_q, n_head, d_k // n_head) # Original
+            # k = self.w_k(k).view(sz_b, len_k, n_head, d_k // n_head)                        
         except:
             q = self.w_q(q).view(sz_b, len_q, n_head, d_k // n_head) # Original 避免最后一个batch只有27而报错
             k = self.w_k(k).view(sz_b, len_k, n_head, d_k // n_head)                
@@ -76,14 +76,14 @@ class MultiHeadAttention(nn.Module): # MultiHeadAttention(n_head=4, d_emb_q=256,
             mask2 = mask2.unsqueeze(1).unsqueeze(2)  # For head axis broadcasting.
 
         # result b x n x lq x (dv/n)
-        result, attn = self.attention(q, k, v, mask1=mask1, mask2=mask2)
+        result, attn = self.attention(q, k, v, mask1=mask1, mask2=mask2) # result.shape=([2, 8, 48, 4])  attn.shape=torch.Size([2, 8, 48, 48])
 
         # Transpose to move the head dimension back: b x l x n x (dv/n)
         # Combine the last two dimensions to concatenate all the heads together: b x l x (dv)
-        result = result.transpose(1, 2).contiguous().view(sz_b, len_q, -1)
+        result = result.transpose(1, 2).contiguous().view(sz_b, len_q, -1) # result.shape=([2, 48, 32])
 
         # b x l x (d_model)
-        result = self.dropout(self.fc(result))
+        result = self.dropout(self.fc(result)) # result.shape=([2, 48, 140])
 
         result += residual # result = result.masked_fill(gate_ < 0, 0)
 

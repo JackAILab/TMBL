@@ -182,26 +182,26 @@ class AOTN(nn.Module):
         self.private_a = self.fc_a(self.private_a)  # ([2, 32, 296]) -> ([2, 32, 256])
         self.private_v = self.fc_v(self.private_v)
         self.private_t = self.fc_t(self.private_t)
-        # ===== 额外引入一层通信层用来提升性能
-        self.private_a = self.MLP_Communicator1(self.private_a.permute(1, 0, 2)).permute(1, 0, 2) # ([2, 32, 296]) -> ([32, 2, 256]) -> ([2, 32, 256]) 为了适应之后的loss计算
-        self.private_v = self.MLP_Communicator1(self.private_v.permute(1, 0, 2)).permute(1, 0, 2)
-        self.private_t = self.MLP_Communicator1(self.private_t.permute(1, 0, 2)).permute(1, 0, 2)            
-        self.share_T = self.MLP_Communicator2(self.share_T.permute(1, 0, 2)).permute(1, 0, 2)
-        self.share_V = self.MLP_Communicator2(self.share_V.permute(1, 0, 2)).permute(1, 0, 2)
-        self.share_A = self.MLP_Communicator2(self.share_A.permute(1, 0, 2)).permute(1, 0, 2)
+        # # ===== 额外引入一层通信层用来提升性能
+        # self.private_a = self.MLP_Communicator1(self.private_a.permute(1, 0, 2)).permute(1, 0, 2) # ([2, 32, 296]) -> ([32, 2, 256]) -> ([2, 32, 256]) 为了适应之后的loss计算
+        # self.private_v = self.MLP_Communicator1(self.private_v.permute(1, 0, 2)).permute(1, 0, 2)
+        # self.private_t = self.MLP_Communicator1(self.private_t.permute(1, 0, 2)).permute(1, 0, 2)            
+        # self.share_T = self.MLP_Communicator2(self.share_T.permute(1, 0, 2)).permute(1, 0, 2)
+        # self.share_V = self.MLP_Communicator2(self.share_V.permute(1, 0, 2)).permute(1, 0, 2)
+        # self.share_A = self.MLP_Communicator2(self.share_A.permute(1, 0, 2)).permute(1, 0, 2)
         
-        # # ===== 加入 可学习的 cls token 区分 6 种模态信息 避免模型偏好某一种特定的模态 (可以提升一点acc7,acc2提升不大)
-        # try: # 防止技术维度的特征绑定失衡 如([27, 256]) 绑定后变为 ([32, 256]) 最后一个batch不足32个样本
-        #     all_modal = torch.cat([self.private_a.permute(1, 0, 2), self.private_v.permute(1, 0, 2), self.private_t.permute(1, 0, 2), self.cls_token, \
-        #                         self.share_T.permute(1, 0, 2), self.share_V.permute(1, 0, 2), self.share_A.permute(1, 0, 2), self.cls_token],dim=1) # 捕获输入的分段信息
-        #     all_modal = all_modal + self.pos_embed # 捕获输入的顺序信息
-        #     # ([32, 2, 256])*3+([32, 1, 256])+([32, 2, 256])*3+([32, 1, 256]) -> ([32, 14, 256]) [B,L,dim] / [B,C,H,W]
-        # except:
-        #     all_modal = torch.cat([self.private_a.permute(1, 0, 2), self.private_v.permute(1, 0, 2), self.private_t.permute(1, 0, 2), \
-        #                         self.share_T.permute(1, 0, 2), self.share_V.permute(1, 0, 2), self.share_A.permute(1, 0, 2)],dim=1)           
+        # ===== 加入 可学习的 cls token 区分 6 种模态信息 避免模型偏好某一种特定的模态 (可以提升一点acc7,acc2提升不大)
+        try: # 防止技术维度的特征绑定失衡 如([27, 256]) 绑定后变为 ([32, 256]) 最后一个batch不足32个样本
+            all_modal = torch.cat([self.private_a.permute(1, 0, 2), self.private_v.permute(1, 0, 2), self.private_t.permute(1, 0, 2), self.cls_token, \
+                                self.share_T.permute(1, 0, 2), self.share_V.permute(1, 0, 2), self.share_A.permute(1, 0, 2), self.cls_token],dim=1) # 捕获输入的分段信息
+            all_modal = all_modal + self.pos_embed # 捕获输入的顺序信息
+            # ([32, 2, 256])*3+([32, 1, 256])+([32, 2, 256])*3+([32, 1, 256]) -> ([32, 14, 256]) [B,L,dim] / [B,C,H,W]
+        except:
+            all_modal = torch.cat([self.private_a.permute(1, 0, 2), self.private_v.permute(1, 0, 2), self.private_t.permute(1, 0, 2), \
+                                self.share_T.permute(1, 0, 2), self.share_V.permute(1, 0, 2), self.share_A.permute(1, 0, 2)],dim=1)           
             
-        all_modal = torch.cat([self.private_a.permute(1, 0, 2), self.private_v.permute(1, 0, 2), self.private_t.permute(1, 0, 2), \
-                            self.share_T.permute(1, 0, 2), self.share_V.permute(1, 0, 2), self.share_A.permute(1, 0, 2)],dim=1)        
+        # all_modal = torch.cat([self.private_a.permute(1, 0, 2), self.private_v.permute(1, 0, 2), self.private_t.permute(1, 0, 2), \
+        #                     self.share_T.permute(1, 0, 2), self.share_V.permute(1, 0, 2), self.share_A.permute(1, 0, 2)],dim=1)        
                       
         second_o7 = self.fusion3(all_modal.permute(0, 2, 1)).view(all_modal.size(0), -1) 
         
