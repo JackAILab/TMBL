@@ -7,6 +7,7 @@ from solver import Solver
 import torch
 import warnings
 
+
 warnings.filterwarnings("ignore")  # ignore the warning
 
 if __name__ == '__main__':
