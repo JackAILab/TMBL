@@ -1,4 +1,4 @@
-# Image Derain
+# Multimodal Sentiment Analysis
 This repository records the proposed Multimodal Sentiment Analysis on Pytorch Framework
 ## Trackers
 Here is a list of the improved trackers.
@@ -10,7 +10,7 @@ Here is a list of the improved trackers.
 * AOBERT: All-modalities-inOne BERT for multimodal sentiment analysis, 2023. [[Paper]](https://www.sciencedirect.com/science/article/pii/S1566253522002329)  
 
 ## Findings
-* Empirical results show that our proposed module for progressive inpainting achieves near state-of-the-art performance in several rain removal tasks.
+* In this study, we develop a transformer model equipped with a modality-bound learning mechanism to extract unified affective information from multiple modalities. Our proposed structure and method hold potential for broader applications in other fields related to multimodal interaction and fusion, such as multimodal disease diagnosis.
 
 
 
