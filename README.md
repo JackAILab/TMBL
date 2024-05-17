@@ -18,7 +18,7 @@ Here is a list of the improved trackers.
 
 
 
-* If you have any question, please email to JiehuiHuang1107@163.com or jhhuang117@gmail.com
+* If you have any question, please set the issue and PR, we will process it as soon as possible~
 
 
 
