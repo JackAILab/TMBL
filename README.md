@@ -1,7 +1,7 @@
 # Multimodal Sentiment Analysis
 This repository records the proposed Multimodal Sentiment Analysis on Pytorch Framework.
 
-“TMBL: Transformer-based multimodal binding learning model for multimodal sentiment analysis”, paper has been accepect by Knowledge-based System.
+“TMBL: Transformer-based multimodal binding learning model for multimodal sentiment analysis”, paper has been accepted by Knowledge-Based System.
 
 
 ## Trackers
